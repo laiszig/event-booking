@@ -2,7 +2,6 @@ package routes
 
 import (
 	"event-booking/models"
-	"event-booking/utils"
 	"net/http"
 	"strconv"
 
@@ -36,28 +35,15 @@ func getEvent(ctx *gin.Context) {
 }
 
 func createEvent(ctx *gin.Context) {
-	token := ctx.Request.Header.Get("Authorization")
-	if token == "" {
-		ctx.JSON(http.StatusUnauthorized, gin.H{
-			"message": "not authorized."})
-		return
-	}
-
-	userId, err := utils.VerifyToken(token)
-	if err != nil {
-		ctx.JSON(http.StatusUnauthorized, gin.H{
-			"message": "not authorized."})
-		return
-	}
-
 	var event models.Event
-	err = ctx.ShouldBindJSON(&event)
+	err := ctx.ShouldBindJSON(&event)
 	if err != nil {
 		ctx.JSON(http.StatusBadRequest, gin.H{
 			"message": "Failed to parse request data."})
 		return
 	}
 
+	userId := ctx.GetInt64("userId")
 	event.UserID = userId
 
 	err = event.Save()
@@ -75,6 +61,21 @@ func updateEvent(ctx *gin.Context) {
 	if err != nil {
 		ctx.JSON(http.StatusBadRequest, gin.H{
 			"message": "Failed to parse eventId"})
+		return
+	}
+
+	userId := ctx.GetInt64("userId")
+	event, err := models.GetEventById(eventId)
+	if err != nil {
+		ctx.JSON(http.StatusInternalServerError, gin.H{
+			"message": "Failed to get event."})
+		return
+	}
+
+	if event.UserID != userId {
+		ctx.JSON(http.StatusUnauthorized, gin.H{
+			"message": "Not authorized.",
+		})
 		return
 	}
 
@@ -105,6 +106,7 @@ func updateEvent(ctx *gin.Context) {
 }
 
 func deleteEvent(ctx *gin.Context) {
+	userId := ctx.GetInt64("userId")
 	eventId, err := strconv.ParseInt(ctx.Param("id"), 10, 64)
 	if err != nil {
 		ctx.JSON(http.StatusBadRequest, gin.H{
@@ -116,6 +118,13 @@ func deleteEvent(ctx *gin.Context) {
 	if err != nil {
 		ctx.JSON(http.StatusInternalServerError, gin.H{
 			"message": "Failed to get event."})
+		return
+	}
+
+	if event.UserID != userId {
+		ctx.JSON(http.StatusUnauthorized, gin.H{
+			"message": "Not authorized.",
+		})
 		return
 	}
 
