@@ -81,5 +81,36 @@ func updateEvent(ctx *gin.Context) {
 
 	updatedEvent.ID = int(eventId)
 	err = updatedEvent.Update()
+	if err != nil {
+		ctx.JSON(http.StatusInternalServerError, gin.H{
+			"message": "Failed to update event."})
+		return
+	}
 
+	ctx.JSON(http.StatusOK, gin.H{"message": "Event updated", "event": updatedEvent})
+}
+
+func deleteEvent(ctx *gin.Context) {
+	eventId, err := strconv.ParseInt(ctx.Param("id"), 10, 64)
+	if err != nil {
+		ctx.JSON(http.StatusBadRequest, gin.H{
+			"message": "Failed to parse eventId"})
+		return
+	}
+
+	event, err := models.GetEventById(eventId)
+	if err != nil {
+		ctx.JSON(http.StatusInternalServerError, gin.H{
+			"message": "Failed to get event."})
+		return
+	}
+
+	err = event.Delete()
+	if err != nil {
+		ctx.JSON(http.StatusInternalServerError, gin.H{
+			"message": "Failed to delete event."})
+		return
+	}
+
+	ctx.JSON(http.StatusOK, gin.H{"message": "Event deleted successfully."})
 }
