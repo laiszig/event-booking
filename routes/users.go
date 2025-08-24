@@ -2,6 +2,7 @@ package routes
 
 import (
 	"event-booking/models"
+	"event-booking/utils"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
@@ -42,5 +43,15 @@ func userLogin(ctx *gin.Context) {
 		return
 	}
 
-	ctx.JSON(http.StatusOK, gin.H{"message": "User login successfully."})
+	token, err := utils.GenerateToken(user.Email, user.ID)
+	if err != nil {
+		ctx.JSON(http.StatusInternalServerError, gin.H{
+			"message": "Failed to generate token."})
+		return
+	}
+
+	ctx.JSON(http.StatusOK, gin.H{
+		"message": "User login successfully.",
+		"token":   token,
+	})
 }

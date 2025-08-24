@@ -2,6 +2,7 @@ package routes
 
 import (
 	"event-booking/models"
+	"event-booking/utils"
 	"net/http"
 	"strconv"
 
@@ -35,16 +36,29 @@ func getEvent(ctx *gin.Context) {
 }
 
 func createEvent(ctx *gin.Context) {
+	token := ctx.Request.Header.Get("Authorization")
+	if token == "" {
+		ctx.JSON(http.StatusUnauthorized, gin.H{
+			"message": "not authorized."})
+		return
+	}
+
+	userId, err := utils.VerifyToken(token)
+	if err != nil {
+		ctx.JSON(http.StatusUnauthorized, gin.H{
+			"message": "not authorized."})
+		return
+	}
+
 	var event models.Event
-	err := ctx.ShouldBindJSON(&event)
+	err = ctx.ShouldBindJSON(&event)
 	if err != nil {
 		ctx.JSON(http.StatusBadRequest, gin.H{
 			"message": "Failed to parse request data."})
 		return
 	}
 
-	event.ID = 1
-	event.UserID = 1
+	event.UserID = userId
 
 	err = event.Save()
 	if err != nil {
@@ -79,7 +93,7 @@ func updateEvent(ctx *gin.Context) {
 		return
 	}
 
-	updatedEvent.ID = int(eventId)
+	updatedEvent.ID = eventId
 	err = updatedEvent.Update()
 	if err != nil {
 		ctx.JSON(http.StatusInternalServerError, gin.H{
